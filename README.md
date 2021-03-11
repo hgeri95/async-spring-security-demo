@@ -20,17 +20,17 @@ public void enableAuthCtxOnSpawnedThreads() {
     SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
 }
 ```
-If you write a simple test, which perform a simple call it will solve your problem. Maybe you will be satisfied with it 
+If you write a simple test, which performs a simple call, it will solve your problem. Maybe you will be satisfied with it 
 for a long time in production as well.
 
 But there is a closed ticket in Spring Security GitHub, where you can read about a discussion why this is not a solution,
  when you are using ThreadPool. (https://github.com/spring-projects/spring-security/issues/6856) This is pretty interesting, but
-a bit hard to understand. And I never read any Spring documentation, which mention such a problem. 
+a bit hard to understand. And I never read any Spring documentation, which mentioned such a problem. 
 
 As my primary school math teacher said "Until you cannot prove something, I don't believe it", so I started to look the spring implementation.
 Without going into the details I found, that the mentioned strategy and the DelegatingSecurityContextAsyncTaskExecutor doing two 
 different things. The MODE_INHERITABLETHREADLOCAL strategy clears the context, when you call the SecurityContextHolder.clearContext()
-method. While the DelegatingSecurityContextAsyncTaskExecutor calls the clearContext() after an execution finished. Based on this
+method. While the DelegatingSecurityContextAsyncTaskExecutor calls the clearContext() after an execution was finished. Based on this
 I had a theory that the mentioned problem in the ticket is a real problem, because in some cases the ThreadPoll will contain
 Threads, where the SecurityContext is already set for a user and it's not cleared. In the next chapter, I will show you 
 a basic example how I reproduced the issue and tried out different solutions.
@@ -40,8 +40,7 @@ a basic example how I reproduced the issue and tried out different solutions.
 *You can skip this chapter if you are not interested in the proof.*
 
 I created a small Spring demo app with Spring Security and with an @Async method.
-I have an AuthenticationFilter, which is very primitive, but it works as most of the filters, for example most of the 
-JWT (JSON WEB TOKEN) implementations do the same thing with some token parsing.
+I have an AuthenticationFilter, which is very primitive, but it works as most of the security filters, without token validation.
 
 ```java
 @Component
@@ -63,7 +62,7 @@ public class DemoAuthenticationFilter extends BasicAuthenticationFilter {
 }
 ```
 
-I just want to set the username as the Authorization header and this will be saved into the SecurityContext. After chain execution
+I just want to send the username as Authorization header and this will be saved into the SecurityContext. After chain execution
 the SecurityContext will be cleared. (You can find many examples, where you will see similar patterns)
 
 What I need is a security config, where I can define my "security" filter.
@@ -94,7 +93,7 @@ public class WebSecurity extends WebSecurityConfigurerAdapter {
 ```
 
 Let's create a simple REST controller, where the username will be a request parameter and based on an asnyc call it will give
-back the username from the SecurityContextHolder inside the async function.
+back the username from the SecurityContextHolder inside the async method.
 ```java
 @RestController
 public class DemoController {
@@ -109,7 +108,7 @@ public class DemoController {
  }
 }
 ```
-The service with the async method.
+The service with the async method is the following.
 ```java
 @Service
 @Slf4j
@@ -126,7 +125,7 @@ public class DemoService {
 ```
 
 ### Test case #1
-Just test it with the defaults,so we don't want to overwrite the default SecurityContextHolder strategy, so the config is 
+Just test it with the defaults, so we don't want to overwrite the default SecurityContextHolder strategy, so the config is 
 pretty simple.
 ```java
 @Configuration
@@ -151,7 +150,7 @@ And the test will perform a single call. (In the application.properties I set th
 
 ### Test case #2
 
-Now I will user the MODE_INHERITABLETHREADLOCAL strategy. (Profile: *inheritable*)
+Now I will use the MODE_INHERITABLETHREADLOCAL strategy. (Profile: *inheritable*)
 ```java
 @Configuration
 @EnableAsync
@@ -165,7 +164,7 @@ public class DemoConfigurationInheritable {
 }
 ```
 
-If I run the previous test the result will be green. But what is the situation, if we perform paralell calls, like this:
+If I run the previous test the result will be green. But what's the situation, if I perform paralell calls, like this:
 
 ```java
 @Test
@@ -204,11 +203,11 @@ For some time it will work fine, but in some cases the name in the parameter and
 2021-03-12 00:14:16.895  INFO 5128 --- [         task-2] c.e.a.service.DemoService                : Username param: Pumbaa and context: Timon
 Exception in thread "Thread-3" Exception in thread "Thread-2" org.opentest4j.AssertionFailedError: expected: <Pumbaa> but was: <Timon>
 ```
-**Result:** As you can see problem in the introduction was real.
+**Result:** As you can see the problem raising in the introduction was real.
 
-### Test case *3
+### Test case #3
 Many pages will mention another solution for the original problem, so let's use the DelegatingSecurityContextAsyncTaskExecutor and
-run the multi threaded test. I used the following config with profile *delegating*:
+run the multi threaded test again. I used the following config with profile *delegating*:
 ```java
 @Configuration
 @EnableAsync
@@ -228,7 +227,7 @@ public class DemoConfigurationDelegating {
 }
 ```
 
-**Result:** This will work as expected. The username is never mixed up, so my assumption was true. The source code never lies.
+**Result:** This will work as expected. The username is never mixed up, so my assumption was true.
 
 ## Conclusion
 If you want to use async functions in your Spring project and ThreadPool (which is the default), in the same time and 
