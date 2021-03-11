@@ -29,41 +29,38 @@ class AsyncSecurityDemoApplicationTests {
 
     @Test
     void testSimpleCall() {
-        final String method = "A";
-        RequestEntity requestEntity = generateRequest(method);
+        final String username = "Joe";
+        RequestEntity requestEntity = generateRequest(username);
         ResponseEntity<String> response = this.restTemplate.exchange(requestEntity, String.class);
-        assertEquals(method, response.getBody());
+        assertEquals(username, response.getBody());
     }
 
     @Test
     @SneakyThrows
     void testSecurityContextInAsyncEnvironmentWithThreadPool() {
-
-        Thread threadA = generateThread("A"); // Thread to call endpoint /A 500 times
-        Thread threadB = generateThread("B"); // Thread to call endpoint /B 500 times
-
+        Thread threadA = generateThread("Timon"); // Thread to call endpoint /A 500 times
+        Thread threadB = generateThread("Pumbaa"); // Thread to call endpoint /B 500 times
         threadA.start();
         threadB.start();
-
         threadA.join();
         threadB.join();
     }
 
-    private Thread generateThread(String method) {
+    private Thread generateThread(String username) {
         return new Thread(() -> {
-            RequestEntity requestEntity = generateRequest(method);
+            RequestEntity requestEntity = generateRequest(username);
             for (int i = 0; i < 500; i++) {
                 ResponseEntity<String> response = this.restTemplate.exchange(requestEntity, String.class);
-                assertEquals(method, response.getBody());
+                assertEquals(username, response.getBody());
             }
         });
     }
 
-    private RequestEntity generateRequest(String method) {
+    private RequestEntity generateRequest(String username) {
         try {
-            String url = "http://localhost:" + port + "/" + method + "/" + method;
+            String url = "http://localhost:" + port + "/name/" + username;
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.AUTHORIZATION, method);
+            headers.add(HttpHeaders.AUTHORIZATION, username);
             RequestEntity requestEntity = new RequestEntity(headers, HttpMethod.GET, new URI(url));
             return requestEntity;
         } catch (URISyntaxException ex) {

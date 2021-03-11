@@ -12,13 +12,10 @@ import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecu
 
 @Configuration
 @EnableAsync
-@Slf4j
 @Profile({"delegating"})
 public class DemoConfigurationDelegating {
-
     @Bean
     public TaskExecutor threadPoolTaskExecutor() {
-        log.info("Creating DelegatingSecurityContextAsyncTaskExecutor...");
         final ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10);
         executor.setMaxPoolSize(20);

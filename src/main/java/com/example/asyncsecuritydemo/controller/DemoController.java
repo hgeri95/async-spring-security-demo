@@ -14,14 +14,8 @@ public class DemoController {
     DemoService demoService;
 
     @SneakyThrows
-    @RequestMapping("/A/{username}")
+    @RequestMapping("/name/{username}")
     public String doSomethingA(@PathVariable String username) {
-        return demoService.hello(username).get();
-    }
-
-    @SneakyThrows
-    @RequestMapping("/B/{username}")
-    public String doSomethingB(@PathVariable String username) {
         return demoService.hello(username).get();
     }
 }
