@@ -1,7 +1,6 @@
 # Why you shouldn't use Spring SecurityContextHolder MODE_INHERITABLETHREADLOCAL with ThreadPool in you project?
 
-In my development team we have a production code out where we use Spring WebFlux to make some reactive functions in our 
-project. This means, that we have some async executions, so we had to find a solution to propagate the SecurityContext properly.
+Maybe you already use some async functions in your spring projects as we do. We are using Spring WebFlux. This means, that we have some async executions, so we had to find a solution to propagate the SecurityContext properly. Read the first chapter to understand why.
 
 ## The base problem with SecurityContextHolder in async environment
 
@@ -24,15 +23,15 @@ If you write a simple test, which performs a simple call, it will solve your pro
 for a long time in production as well.
 
 But there is a closed ticket in Spring Security GitHub, where you can read about a discussion why this is not a solution,
- when you are using ThreadPool. (https://github.com/spring-projects/spring-security/issues/6856) This is pretty interesting, but
+when you are using ThreadPool as well. (https://github.com/spring-projects/spring-security/issues/6856) This is pretty interesting, but
 a bit hard to understand. And I never read any Spring documentation, which mentioned such a problem. 
 
-As my primary school math teacher said "Until you cannot prove something, I don't believe it", so I started to look the spring implementation.
+So I started to look into the spring implementation.
 Without going into the details I found, that the mentioned strategy and the DelegatingSecurityContextAsyncTaskExecutor doing two 
 different things. The MODE_INHERITABLETHREADLOCAL strategy clears the context, when you call the SecurityContextHolder.clearContext()
-method. While the DelegatingSecurityContextAsyncTaskExecutor calls the clearContext() after an execution was finished. Based on this
-I had a theory that the mentioned problem in the ticket is a real problem, because in some cases the ThreadPoll will contain
-Threads, where the SecurityContext is already set for a user and it's not cleared. In the next chapter, I will show you 
+method. While the DelegatingSecurityContextAsyncTaskExecutor calls the clearContext() after an execution is finished. Based on this
+I had a theory that the mentioned problem in the ticket is a real problem, because in some cases the ThreadPool will contain
+Threads, where the SecurityContext is already set for a user and it's not cleared, so it can cause some mess. In the next chapter, I will show you 
 a basic example how I reproduced the issue and tried out different solutions.
 
 ## Test and prove
@@ -62,7 +61,7 @@ public class DemoAuthenticationFilter extends BasicAuthenticationFilter {
 }
 ```
 
-I just want to send the username as Authorization header and this will be saved into the SecurityContext. After chain execution
+I just want to send the username as Authorization header and this will be saved into the SecurityContext. After the chain execution
 the SecurityContext will be cleared. (You can find many examples, where you will see similar patterns)
 
 What I need is a security config, where I can define my "security" filter.
@@ -125,7 +124,7 @@ public class DemoService {
 ```
 
 ### Test case #1
-Just test it with the defaults, so we don't want to overwrite the default SecurityContextHolder strategy, so the config is 
+Just test it with the defaults, so I don't want to overwrite the default SecurityContextHolder strategy, so the config is 
 pretty simple.
 ```java
 @Configuration
